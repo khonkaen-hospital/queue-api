@@ -16,7 +16,7 @@ export class EzhospModel {
   getCurrentVisit(db: knex, hn) {
     return [];
   }
-  
+
   getVisitList(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any, limit: number = 20, offset: number = 0) {
     var sql = db('view_opd_visit as o')
       .select('o.vn', 'o.hn', db.raw('o.date as date_serv'), db.raw('o.time as time_serv'),
@@ -24,7 +24,7 @@ export class EzhospModel {
         'o.title', 'o.name as first_name', 'o.surname as last_name',
         'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
       .where('o.date', dateServ)
-      .whereIn('o.dep', localCode)
+      .whereIn('o.to_dep', localCode)
       .whereNotIn('o.vn', vn);
 
     if (query) {
@@ -47,7 +47,7 @@ export class EzhospModel {
 
     } else {
       if (servicePointCode) {
-        sql.where('o.dep', servicePointCode);
+        sql.where('o.to_dep', servicePointCode);
       }
     }
 
@@ -58,10 +58,10 @@ export class EzhospModel {
   }
 
   getVisitTotal(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any) {
-    var sql = db('opd_visit as o')
+    var sql = db('view_opd_visit as o')
       .select(db.raw('count(1) as total'))
       .where('o.date', dateServ)
-      .whereIn('o.dep', localCode)
+      .whereIn('o.to_dep', localCode)
       .whereNotIn('o.vn', vn);
 
     if (query) {
@@ -84,7 +84,7 @@ export class EzhospModel {
 
     } else {
       if (servicePointCode) {
-        sql.where('o.dep', servicePointCode);
+        sql.where('o.to_dep', servicePointCode);
       }
     }
 
@@ -98,7 +98,7 @@ export class EzhospModel {
         'o.title', 'o.name as first_name', 'o.surname as last_name',
         'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
       .where('o.date', dateServ)
-      .whereIn('o.dep', localCode)
+      .whereIn('o.to_dep', localCode)
       .whereIn('o.vn', vn);
 
     if (query) {
@@ -121,21 +121,20 @@ export class EzhospModel {
 
     } else {
       if (servicePointCode) {
-        sql.where('o.dep', servicePointCode);
+        sql.where('o.to_dep', servicePointCode);
       }
     }
 
     return sql.limit(limit)
       .offset(offset)
       .orderBy('o.time', 'asc');
-
   }
 
   getVisitHistoryTotal(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any) {
-    var sql = db('opd_visit as o')
+    var sql = db('view_opd_visit as o')
       .select(db.raw('count(1) as total'))
       .where('o.date', dateServ)
-      .whereIn('o.dep', localCode)
+      .whereIn('o.to_dep', localCode)
       .whereIn('o.vn', vn);
 
     if (query) {
@@ -158,7 +157,7 @@ export class EzhospModel {
 
     } else {
       if (servicePointCode) {
-        sql.where('o.dep', servicePointCode);
+        sql.where('o.to_dep', servicePointCode);
       }
     }
 
