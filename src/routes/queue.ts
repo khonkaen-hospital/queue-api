@@ -184,10 +184,10 @@ const router = (fastify, { }, next) => {
     const firstName = req.body.firstName;
     const lastName = req.body.lastName;
     const title = req.body.title;
-    const birthDate = req.body.birthDate;
+    const birthDate = req.body.birthDate || '0000-00-00';
     const sex = req.body.sex;
 
-    if (hn && vn && localCode && dateServ && timeServ && firstName && lastName && birthDate) {
+    if (hn && vn && localCode && dateServ && timeServ && firstName && lastName) {
       try {
         // get service point id from mapping
         const rsLocalCode: any = await servicePointModel.getServicePointIdFromLocalCode(db, localCode);
