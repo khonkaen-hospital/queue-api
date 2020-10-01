@@ -42,7 +42,7 @@ switch (hisType) {
 
 function findData(key: string, data: Array<any>) {
   let result = data.find(d => d.name === key);
-  return result ? result?.elements[0]?.text : null;
+  return result ? result.elements[0].text : '';
 }
 
 async function saveWebserviceData(db, cid, _result) {
