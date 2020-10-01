@@ -40,6 +40,49 @@ switch (hisType) {
     hisModel = new HosxpModel();
 }
 
+function findData(key: string, data: Array<any>) {
+  let result = data.find(d => d.name === key);
+  return result ? result?.elements[0]?.text : null;
+}
+
+async function saveWebserviceData(db, cid, _result) {
+  const WS_STATUS = findData('ws_status', _result);
+  if (WS_STATUS === 'NHSO-000001') {
+    let nhsoData = {
+      PERSON_ID: findData('person_id', _result),
+      TITLE: findData('title', _result),
+      TITLE_NAME: findData('title_name', _result),
+      FNAME: findData('fname', _result),
+      LNAME: findData('lname', _result),
+      BIRTHDATE: findData('birthdate', _result),
+      HMAIN: findData('hmain', _result),
+      HMAIN_NAME: findData('hmain_name', _result),
+      MAININSCL: findData('maininscl', _result),
+      MAININSCL_MAIN: findData('maininscl_main', _result),
+      MAININSCL_NAME: findData('maininscl_name', _result),
+      NATION: findData('nation', _result),
+      P_MOO: findData('primary_moo', _result),
+      P_MOOBANE_NAME: findData('primary_mooban_name', _result),
+      P_TOMBON_NAME: findData('primary_tumbon_name', _result),
+      P_AMPHUR_NAME: findData('primary_amphur_name', _result),
+      P_PROVINCE_NAME: findData('primary_province_name', _result),
+      PRIMARYPROVINCE: findData('primaryprovince', _result),
+      PURCHASEPROVINCE: findData('purchaseprovince', _result),
+      PURCHASEPROVINCE_NAME: findData('purchaseprovince_name', _result),
+      STARTDATE: findData('startdate', _result),
+      STARTDATE_SSS: findData('startdate_sss', _result),
+      SEX: findData('sex', _result),
+      SUBINSCL: findData('subinscl', _result),
+      SUBINSCL_NAME: findData('subinscl_name', _result),
+      WS_ID: findData('wsid', _result),
+      WS_BATCH_ID: findData('wsid_batch', _result),
+      WS_DATASOURCE: findData('ws_data_source', _result),
+      WS_DATEREQUEST: findData('ws_date_request', _result),
+    };
+    const result: any = await kioskModel.saveNhso(db, cid, nhsoData);
+  }
+}
+
 const router = (fastify, { }, next) => {
   const dbHIS: Knex = fastify.dbHIS;
   const db: Knex = fastify.db;
@@ -48,10 +91,11 @@ const router = (fastify, { }, next) => {
   fastify.post('/profile', async (req: fastify.Request, reply: fastify.Reply) => {
 
     try {
-      console.log('insert');
+
 
       const token = req.body.token;
       if (token) {
+        const data = req.body;
         const kioskId = req.body.kioskId;
         const decoded = fastify.jwt.verify(token);
         const cid = req.body.cid;
@@ -59,13 +103,15 @@ const router = (fastify, { }, next) => {
         const fname = req.body.fname;
         const lname = req.body.lname;
         const birthDate = req.body.birthDate;
-
+        delete data.token;
+        delete data.kioskId;
         const topic = `kiosk/${kioskId}`;
         const obj = {
-          cid: cid,
-          fullname: `${title}${fname} ${lname}`,
-          birthDate: birthDate
+          ...data, ...{
+            fullname: `${title}${fname} ${lname}`
+          }
         }
+        console.log('insert');
         const payload = {
           ok: true,
           results: obj
@@ -206,13 +252,17 @@ const router = (fastify, { }, next) => {
   fastify.post('/nhso', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
     // const token = req.body.token;
     const data = req.body.data;
-    // console.log(data);
     try {
       const rs: any = await kioskModel.nhso(data);
       if (rs.length) {
         var convert = require('xml-js');
         var result = JSON.parse(convert.xml2json(rs, { compact: false, spaces: 4 }));
+        var resultData = JSON.parse(convert.xml2json(data, { compact: false, spaces: 4 }));
         const _result = result.elements[0].elements[0].elements[0].elements[0].elements
+
+        let pid = resultData.elements[0].elements[1].elements[0].elements[5].elements[0].text;
+
+        await saveWebserviceData(db, pid, _result);
 
         reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, results: _result })
 

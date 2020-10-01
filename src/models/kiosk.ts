@@ -84,5 +84,20 @@ export class KioskModel {
     });
   }
 
+  async saveNhso(db: knex, cid: string, data: any) {
+    const nsdo = db('uc.nhso_smartcard_webservice').where({
+      PERSON_ID: cid
+    });
+    const nhsoResult = await nsdo.first();
+    try {
+      if (nhsoResult) {
+        return nsdo.update(data);
+      } else {
+        return db('uc.nhso_smartcard_webservice').insert(data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
 
+  }
 }
