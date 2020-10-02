@@ -935,6 +935,20 @@ const router = (fastify, { }, next) => {
     }
   });
 
+  fastify.post('/pending-single', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
+
+    const queueId = req.body.queueId;
+    const servicePointId = req.body.servicePointId;
+    try {
+      await queueModel.markCompleted(db, queueId);
+      await queueModel.markPending(db, queueId, servicePointId);
+      reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK });
+    } catch (error) {
+      fastify.log.error(error);
+      reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
+    }
+  });
+
   fastify.post('/caller/:queueId', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 
     const queueId = req.params.queueId;
