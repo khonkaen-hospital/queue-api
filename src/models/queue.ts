@@ -264,7 +264,7 @@ export class QueueModel {
 
   getWaitingGroupList(db: knex, dateServ: any, servicePointId: any, priorityId: any, limit: any, offset: any) {
     const sql = db('q4u_queue as q')
-      .select('q.queue_id', 'q.queue_interview', 'q.hn', 'q.vn', 'q.service_point_id', 'q.priority_id', 'q.queue_number', 'q.queue_running',
+      .select('q.date_create', 'q.queue_id', 'q.queue_interview', 'q.hn', 'q.vn', 'q.service_point_id', 'q.priority_id', 'q.queue_number', 'q.queue_running',
         'q.room_id', 'q.date_serv', 'q.time_serv', 'p.title', 'p.first_name',
         'p.last_name', 'p.birthdate', 'pr.priority_name', 'q.is_interview')
       .innerJoin('q4u_person as p', 'p.hn', 'q.hn')
