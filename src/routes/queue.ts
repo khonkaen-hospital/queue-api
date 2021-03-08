@@ -163,8 +163,41 @@ const router = (fastify, { }, next) => {
 
 		try {
 			const dateServ: any = moment().format('YYYY-MM-DD');
+			console.log(dateServ);
 			const rsTotal: any = await queueModel.getVisitHistoryTotal(db, dateServ, servicePointId, query);
 			const rs: any = await queueModel.getVisitHistoryList(db, dateServ, servicePointId, query, limit, offset);
+
+			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, results: rs, total: rsTotal[0].total });
+		} catch (error) {
+			fastify.log.error(error);
+			reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
+		}
+	});
+
+	fastify.get('/his-visit-robot', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
+
+		const limit = +req.query.limit;
+		const offset = +req.query.offset;
+		const servicePointCode: any = req.query.servicePointCode || '';
+		const query: any = req.query.query || '';
+		try {
+			const dateServ: any = moment().format('YYYY-MM-DD');
+			const rsLocalCode: any = await servicePointModel.getLocalCode(db);
+			const rsCurrentOnQueue: any = await queueModel.getCurrentVisitOnQueue(db, dateServ);
+
+			const localCodes: any = [];
+			const vn: any = [];
+
+			rsLocalCode.forEach(v => {
+				localCodes.push(v.local_code);
+			});
+
+			rsCurrentOnQueue.forEach(v => {
+				vn.push(v.vn);
+			});
+
+			const rsTotal: any = await hisModel.getVisitTotalRobot(dbHIS, dateServ, query, localCodes, vn, servicePointCode);
+			const rs: any = await hisModel.getVisitListRobot(dbHIS, dateServ, query, localCodes, vn, servicePointCode, limit, offset);
 
 			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, results: rs, total: rsTotal[0].total });
 		} catch (error) {
@@ -186,129 +219,42 @@ const router = (fastify, { }, next) => {
 		const title = req.body.title;
 		const birthDate = req.body.birthDate || '0000-00-00';
 		const sex = req.body.sex;
+		const servicePointId = req.body.servicePointId;
 
 		const nanoid = customAlphabet('123456789', 4);
 		const queueUniqueNumber = nanoid();
 
 		if (hn && vn && localCode && dateServ && firstName && lastName) {
 			try {
-				// get service point id from mapping
-				const rsLocalCode: any = await servicePointModel.getServicePointIdFromLocalCode(db, localCode);
-				const servicePointId = rsLocalCode.length ? rsLocalCode[0].service_point_id : null;
-				const departmentId = rsLocalCode.length ? rsLocalCode[0].department_id : null;
 
-				if (servicePointId) {
+				await queueModel.savePatient(db, hn, title, firstName, lastName, birthDate, sex);
+				let queueNumber = 0;
+				let queueInterview = 0;
 
-					// get prefix
-					let strQueueNumber: string = null;
-					const rsPriorityPrefix: any = await priorityModel.getPrefix(db, priorityId);
-					const prefixPriority: any = rsPriorityPrefix[0].priority_prefix || '0';
-					const rsPointPrefix: any = await servicePointModel.getPrefix(db, servicePointId);
-					const prefixPoint: any = rsPointPrefix[0].prefix || '0';
+				const dateCreate = moment().format('YYYY-MM-DD HH:mm:ss');
 
-					await queueModel.savePatient(db, hn, title, firstName, lastName, birthDate, sex);
-					let queueNumber = 0;
-					let queueInterview = 0;
+				const qData: any = {};
+				qData.servicePointId = servicePointId;
+				qData.dateServ = dateServ;
+				qData.timeServ = timeServ;
+				qData.queueNumber = queueUniqueNumber;
+				qData.hn = hn;
+				qData.vn = vn;
+				qData.priorityId = priorityId;
+				qData.dateCreate = dateCreate;
+				qData.hisQueue = hisQueue;
+				qData.queueRunning = queueUniqueNumber;
+				qData.queueInterview = queueInterview;
 
-					const usePriorityQueueRunning = rsPointPrefix[0].priority_queue_running || 'N';
-					const useHISQueue = process.env.USE_HIS_QUEUE || 'N';
+				const queueId: any = await queueModel.createQueueInfo(db, qData);
 
-					let _queueRunning = 0;
+				const topic = process.env.QUEUE_CENTER_TOPIC;
+				const topicServicePoint = `${process.env.SERVICE_POINT_TOPIC}/${servicePointId}`;
 
-					if (useHISQueue === 'Y') {
-						const rsQueue = await hisModel.getHISQueue(dbHIS, hn, dateServ);
-						if (rsQueue.length) {
-							const queue = rsQueue[0].queue;
-							strQueueNumber = queue;
-						} else {
-							strQueueNumber = '000';
-						}
-					} else {
-						// queue number
-						let rs1: any;
+				fastify.mqttClient.publish(topic, 'update visit', { qos: 0, retain: false });
+				fastify.mqttClient.publish(topicServicePoint, '{"message":"update_visit"}', { qos: 0, retain: false });
 
-						if (usePriorityQueueRunning === 'Y') {
-							rs1 = await queueModel.checkServicePointQueueNumber(db, servicePointId, dateServ, priorityId);
-						} else {
-							rs1 = await queueModel.checkServicePointQueueNumber(db, servicePointId, dateServ);
-						}
-
-						if (rs1.length) {
-							queueNumber = rs1[0]['current_queue'] + 1;
-							usePriorityQueueRunning === 'Y'
-								? await queueModel.updateServicePointQueueNumber(db, servicePointId, dateServ, priorityId)
-								: await queueModel.updateServicePointQueueNumber(db, servicePointId, dateServ);
-						} else {
-							queueNumber = 1;
-							usePriorityQueueRunning === 'Y'
-								? await queueModel.createServicePointQueueNumber(db, servicePointId, dateServ, priorityId)
-								: await queueModel.createServicePointQueueNumber(db, servicePointId, dateServ);
-						}
-
-						_queueRunning = queueNumber;
-
-						const queueDigit = +process.env.QUEUE_DIGIT || 3;
-						let _queueNumber = null;
-
-						if (process.env.ZERO_PADDING === 'Y') {
-							_queueNumber = padStart(queueNumber.toString(), queueDigit, '0');
-						} else {
-							_queueNumber = queueNumber.toString();
-						}
-
-
-
-						if (process.env.USE_PRIORITY_PREFIX === 'Y') {
-							strQueueNumber = `${prefixPoint}${prefixPriority} ${_queueNumber}`;
-						} else {
-							strQueueNumber = usePriorityQueueRunning === 'Y'
-								? `${prefixPoint}${prefixPriority} ${_queueNumber}`
-								: `${prefixPoint} ${_queueNumber}`;
-						}
-
-					}
-
-					const rs2 = await queueModel.checkServicePointQueueNumber(db, 999, dateServ);
-
-					// queue interview
-					if (rs2.length) {
-						queueInterview = rs2[0]['current_queue'] + 1;
-						await queueModel.updateServicePointQueueNumber(db, 999, dateServ);
-					} else {
-						queueInterview = 1;
-						await queueModel.createServicePointQueueNumber(db, 999, dateServ);
-					}
-
-					const dateCreate = moment().format('YYYY-MM-DD HH:mm:ss');
-
-					const qData: any = {};
-					qData.servicePointId = servicePointId;
-					qData.dateServ = dateServ;
-					qData.timeServ = timeServ;
-					qData.queueNumber = queueUniqueNumber;
-					qData.hn = hn;
-					qData.vn = vn;
-					qData.priorityId = priorityId;
-					qData.dateCreate = dateCreate;
-					qData.hisQueue = hisQueue;
-					qData.queueRunning = queueUniqueNumber;
-					qData.queueInterview = queueInterview;
-
-					const queueId: any = await queueModel.createQueueInfo(db, qData);
-
-					const topic = process.env.QUEUE_CENTER_TOPIC;
-					const topicServicePoint = `${process.env.SERVICE_POINT_TOPIC}/${servicePointId}`;
-					const topicDepartment = `${process.env.DEPARTMENT_TOPIC}/${departmentId}`;
-
-					fastify.mqttClient.publish(topic, 'update visit', { qos: 0, retain: false });
-					fastify.mqttClient.publish(topicServicePoint, '{"message":"update_visit"}', { qos: 0, retain: false });
-					fastify.mqttClient.publish(topicDepartment, '{"message":"update_visit"}', { qos: 0, retain: false });
-
-					reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, hn: hn, vn: vn, queueNumber: queueNumber, queueId: queueId[0] });
-
-				} else {
-					reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'ไม่พบรหัสแผนกที่ต้องการ' });
-				}
+				reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, hn: hn, vn: vn, queueNumber: queueNumber, queueId: queueId[0] });
 
 			} catch (error) {
 				fastify.log.error(error);

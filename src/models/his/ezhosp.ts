@@ -1,167 +1,239 @@
 import * as knex from 'knex';
 export class EzhospModel {
 
-  getPatientInfo(db: knex, cid: any) {
-    return db('patient')
-      .select('hn', 'name as first_name', 'title', 'sex', 'surname as last_name', 'birth as birthdate')
-      .where('no_card', cid).limit(1);
-  }
+	getPatientInfo(db: knex, cid: any) {
+		return db('patient')
+			.select('hn', 'name as first_name', 'title', 'sex', 'surname as last_name', 'birth as birthdate')
+			.where('no_card', cid).limit(1);
+	}
 
-  getPatientInfoWithHN(db: knex, hn: any) {
-    return db('patient')
-      .select('hn', 'name as first_name', 'title', 'sex', 'surname as last_name', 'birth as birthdate')
-      .where('hn', hn).limit(1);
-  }
+	getPatientInfoWithHN(db: knex, hn: any) {
+		return db('patient')
+			.select('hn', 'name as first_name', 'title', 'sex', 'surname as last_name', 'birth as birthdate')
+			.where('hn', hn).limit(1);
+	}
 
-  getCurrentVisit(db: knex, hn) {
-    return [];
-  }
+	getCurrentVisit(db: knex, hn) {
+		return [];
+	}
 
-  getVisitList(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any, limit: number = 20, offset: number = 0) {
-    var sql = db('view_opd_visit as o')
-      .select('o.vn', 'o.hn', db.raw('o.date as date_serv'), db.raw('o.time as time_serv'),
-        'o.dep as clinic_code', 'o.dep_name as clinic_name',
-        'o.title', 'o.name as first_name', 'o.surname as last_name',
-        'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
-      .where('o.date', dateServ)
-      .whereIn('o.to_dep', localCode)
-      .whereNotIn('o.vn', vn);
+	getVisitListRobot(db: knex, dateServ: any, query: any, localCode: any[], vn: any[], servicePointCode: any, limit: number = 20, offset: number = 0) {
+		var sql = db('view_opd_visit as o')
+			.select('o.vn', 'o.hn', db.raw('o.date as date_serv'), db.raw('o.time as time_serv'),
+				'o.dep as clinic_code', 'o.dep_name as clinic_name',
+				'o.title', 'o.name as first_name', 'o.surname as last_name',
+				'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
+			.where('o.date', dateServ)
+			.whereNotIn('o.vn', vn);
 
-    if (query) {
-      var _arrQuery = query.split(' ');
-      var firstName = null;
-      var lastName = null;
+		if (query) {
+			var _arrQuery = query.split(' ');
+			var firstName = null;
+			var lastName = null;
 
-      if (_arrQuery.length === 2) {
-        firstName = `${_arrQuery[0]}%`;
-        lastName = `${_arrQuery[1]}%`;
-      }
+			if (_arrQuery.length === 2) {
+				firstName = `${_arrQuery[0]}%`;
+				lastName = `${_arrQuery[1]}%`;
+			}
 
-      sql.where(w => {
-        var _where = w.where('o.hn', query);
-        if (firstName && lastName) {
-          _where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
-        }
-        return _where;
-      });
+			sql.where(w => {
+				var _where = w.where('o.hn', query);
+				if (firstName && lastName) {
+					_where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
+				}
+				return _where;
+			});
 
-    } else {
-      if (servicePointCode) {
-        sql.where('o.to_dep', servicePointCode);
-      }
-    }
+		} else {
+			if (servicePointCode) {
+				sql.where('o.to_dep', servicePointCode);
+			}
+		}
 
-    return sql.limit(limit)
-      .offset(offset)
-      .orderBy('o.time', 'asc');
+		return sql.limit(limit)
+			.offset(offset)
+			.orderBy('o.time', 'asc');
 
-  }
+	}
 
-  getVisitTotal(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any) {
-    var sql = db('view_opd_visit as o')
-      .select(db.raw('count(1) as total'))
-      .where('o.date', dateServ)
-      .whereIn('o.to_dep', localCode)
-      .whereNotIn('o.vn', vn);
+	getVisitTotalRobot(db: knex, dateServ: any, query: any, localCode: any[], vn: any[], servicePointCode: any) {
+		var sql = db('view_opd_visit as o')
+			.select(db.raw('count(1) as total'))
+			.where('o.date', dateServ)
+			.whereNotIn('o.vn', vn);
 
-    if (query) {
-      var _arrQuery = query.split(' ');
-      var firstName = null;
-      var lastName = null;
+		if (query) {
+			var _arrQuery = query.split(' ');
+			var firstName = null;
+			var lastName = null;
 
-      if (_arrQuery.length === 2) {
-        firstName = `${_arrQuery[0]}%`;
-        lastName = `${_arrQuery[1]}%`;
-      }
+			if (_arrQuery.length === 2) {
+				firstName = `${_arrQuery[0]}%`;
+				lastName = `${_arrQuery[1]}%`;
+			}
 
-      sql.where(w => {
-        var _where = w.where('o.hn', query);
-        if (firstName && lastName) {
-          _where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
-        }
-        return _where;
-      });
+			sql.where(w => {
+				var _where = w.where('o.hn', query);
+				if (firstName && lastName) {
+					_where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
+				}
+				return _where;
+			});
 
-    } else {
-      if (servicePointCode) {
-        sql.where('o.to_dep', servicePointCode);
-      }
-    }
+		} else {
+			if (servicePointCode) {
+				sql.where('o.to_dep', servicePointCode);
+			}
+		}
 
-    return sql.orderBy('o.dep', 'asc');
-  }
+		return sql.orderBy('o.dep', 'asc');
+	}
 
-  getVisitHistoryList(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any, limit: number = 20, offset: number = 0) {
-    var sql = db('view_opd_visit as o')
-      .select('o.vn', 'o.hn', db.raw('o.date as date_serv'), db.raw('o.time as time_serv'),
-        'o.dep as clinic_code', 'o.dep_name as clinic_name',
-        'o.title', 'o.name as first_name', 'o.surname as last_name',
-        'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
-      .where('o.date', dateServ)
-      .whereIn('o.to_dep', localCode)
-      .whereIn('o.vn', vn);
+	getVisitList(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any, limit: number = 20, offset: number = 0) {
+		var sql = db('view_opd_visit as o')
+			.select('o.vn', 'o.hn', db.raw('o.date as date_serv'), db.raw('o.time as time_serv'),
+				'o.dep as clinic_code', 'o.dep_name as clinic_name',
+				'o.title', 'o.name as first_name', 'o.surname as last_name',
+				'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
+			.where('o.date', dateServ)
+			.whereIn('o.to_dep', localCode)
+			.whereNotIn('o.vn', vn);
 
-    if (query) {
-      var _arrQuery = query.split(' ');
-      var firstName = null;
-      var lastName = null;
+		if (query) {
+			var _arrQuery = query.split(' ');
+			var firstName = null;
+			var lastName = null;
 
-      if (_arrQuery.length === 2) {
-        firstName = `${_arrQuery[0]}%`;
-        lastName = `${_arrQuery[1]}%`;
-      }
+			if (_arrQuery.length === 2) {
+				firstName = `${_arrQuery[0]}%`;
+				lastName = `${_arrQuery[1]}%`;
+			}
 
-      sql.where(w => {
-        var _where = w.where('o.hn', query);
-        if (firstName && lastName) {
-          _where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
-        }
-        return _where;
-      });
+			sql.where(w => {
+				var _where = w.where('o.hn', query);
+				if (firstName && lastName) {
+					_where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
+				}
+				return _where;
+			});
 
-    } else {
-      if (servicePointCode) {
-        sql.where('o.to_dep', servicePointCode);
-      }
-    }
+		} else {
+			if (servicePointCode) {
+				sql.where('o.to_dep', servicePointCode);
+			}
+		}
 
-    return sql.limit(limit)
-      .offset(offset)
-      .orderBy('o.time', 'asc');
-  }
+		return sql.limit(limit)
+			.offset(offset)
+			.orderBy('o.time', 'asc');
 
-  getVisitHistoryTotal(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any) {
-    var sql = db('view_opd_visit as o')
-      .select(db.raw('count(1) as total'))
-      .where('o.date', dateServ)
-      .whereIn('o.to_dep', localCode)
-      .whereIn('o.vn', vn);
+	}
 
-    if (query) {
-      var _arrQuery = query.split(' ');
-      var firstName = null;
-      var lastName = null;
+	getVisitTotal(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any) {
+		var sql = db('view_opd_visit as o')
+			.select(db.raw('count(1) as total'))
+			.where('o.date', dateServ)
+			.whereIn('o.to_dep', localCode)
+			.whereNotIn('o.vn', vn);
 
-      if (_arrQuery.length === 2) {
-        firstName = `${_arrQuery[0]}%`;
-        lastName = `${_arrQuery[1]}%`;
-      }
+		if (query) {
+			var _arrQuery = query.split(' ');
+			var firstName = null;
+			var lastName = null;
 
-      sql.where(w => {
-        var _where = w.where('o.hn', query);
-        if (firstName && lastName) {
-          _where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
-        }
-        return _where;
-      });
+			if (_arrQuery.length === 2) {
+				firstName = `${_arrQuery[0]}%`;
+				lastName = `${_arrQuery[1]}%`;
+			}
 
-    } else {
-      if (servicePointCode) {
-        sql.where('o.to_dep', servicePointCode);
-      }
-    }
+			sql.where(w => {
+				var _where = w.where('o.hn', query);
+				if (firstName && lastName) {
+					_where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
+				}
+				return _where;
+			});
 
-    return sql.orderBy('o.dep', 'asc');
-  }
+		} else {
+			if (servicePointCode) {
+				sql.where('o.to_dep', servicePointCode);
+			}
+		}
+
+		return sql.orderBy('o.dep', 'asc');
+	}
+
+	getVisitHistoryList(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any, limit: number = 20, offset: number = 0) {
+		var sql = db('view_opd_visit as o')
+			.select('o.vn', 'o.hn', db.raw('o.date as date_serv'), db.raw('o.time as time_serv'),
+				'o.dep as clinic_code', 'o.dep_name as clinic_name',
+				'o.title', 'o.name as first_name', 'o.surname as last_name',
+				'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
+			.where('o.date', dateServ)
+			.whereIn('o.to_dep', localCode)
+			.whereIn('o.vn', vn);
+
+		if (query) {
+			var _arrQuery = query.split(' ');
+			var firstName = null;
+			var lastName = null;
+
+			if (_arrQuery.length === 2) {
+				firstName = `${_arrQuery[0]}%`;
+				lastName = `${_arrQuery[1]}%`;
+			}
+
+			sql.where(w => {
+				var _where = w.where('o.hn', query);
+				if (firstName && lastName) {
+					_where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
+				}
+				return _where;
+			});
+
+		} else {
+			if (servicePointCode) {
+				sql.where('o.to_dep', servicePointCode);
+			}
+		}
+
+		return sql.limit(limit)
+			.offset(offset)
+			.orderBy('o.time', 'asc');
+	}
+
+	getVisitHistoryTotal(db: knex, dateServ: any, localCode: any[], vn: any[], servicePointCode: any, query: any) {
+		var sql = db('view_opd_visit as o')
+			.select(db.raw('count(1) as total'))
+			.where('o.date', dateServ)
+			.whereIn('o.to_dep', localCode)
+			.whereIn('o.vn', vn);
+
+		if (query) {
+			var _arrQuery = query.split(' ');
+			var firstName = null;
+			var lastName = null;
+
+			if (_arrQuery.length === 2) {
+				firstName = `${_arrQuery[0]}%`;
+				lastName = `${_arrQuery[1]}%`;
+			}
+
+			sql.where(w => {
+				var _where = w.where('o.hn', query);
+				if (firstName && lastName) {
+					_where.orWhere(x => x.where('o.name', 'like', firstName).where('o.surname', 'like', lastName))
+				}
+				return _where;
+			});
+
+		} else {
+			if (servicePointCode) {
+				sql.where('o.to_dep', servicePointCode);
+			}
+		}
+
+		return sql.orderBy('o.dep', 'asc');
+	}
 
 }
