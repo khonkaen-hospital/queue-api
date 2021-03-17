@@ -13,6 +13,14 @@ export class EzhospModel {
 			.where('hn', hn).limit(1);
 	}
 
+	getPharmacyRobotQueue(db: knex, hn: any, dateServ: string) {
+		return db('pharmacy_opd_drug_robot')
+			.select('pharmacy_opd_drug_robot.*', 'patient.title', 'patient.name', 'patient.surname')
+			.innerJoin('patient', 'patient.hn', 'pharmacy_opd_drug_robot.hn')
+			.whereRaw('date(request_datetime) = ?', [dateServ])
+			.orderBy('request_datetime', 'DESC');
+	}
+
 	getCurrentVisit(db: knex, hn) {
 		return [];
 	}

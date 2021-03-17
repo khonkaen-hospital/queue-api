@@ -199,7 +199,21 @@ const router = (fastify, { }, next) => {
 			const rsTotal: any = await hisModel.getVisitTotalRobot(dbHIS, dateServ, query, localCodes, vn, servicePointCode);
 			const rs: any = await hisModel.getVisitListRobot(dbHIS, dateServ, query, localCodes, vn, servicePointCode, limit, offset);
 
-			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, results: rs, total: rsTotal[0].total });
+			reply.status(HttpStatus.OK).send({ vn, statusCode: HttpStatus.OK, results: rs, total: rsTotal[0].total });
+		} catch (error) {
+			fastify.log.error(error);
+			reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
+		}
+	});
+
+
+	fastify.get('/his-pharmacy-robot', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
+		const hn = req.query.hn || '';
+		const query: any = req.query.query || '';
+		try {
+			const dateServ: any = moment().format('YYYY-MM-DD');
+			const rs: any = await hisModel.getPharmacyRobotQueue(dbHIS, hn, dateServ);
+			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, results: rs });
 		} catch (error) {
 			fastify.log.error(error);
 			reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
