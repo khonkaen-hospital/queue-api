@@ -237,7 +237,7 @@ const router = (fastify, { }, next) => {
 		const nanoid = customAlphabet('123456789', 4);
 		const queueUniqueNumber = nanoid();
 
-		if (hn && vn && localCode && dateServ && firstName && lastName) {
+		if (hn && vn && dateServ && firstName && lastName) {
 			try {
 
 				await queueModel.savePatient(db, hn, title, firstName, lastName, birthDate, sex);
@@ -275,7 +275,7 @@ const router = (fastify, { }, next) => {
 			}
 
 		} else {
-			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'ข้อมูลไม่ครบ' });
+			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'ข้อมูลไม่ครบครับ' });
 		}
 	});
 
