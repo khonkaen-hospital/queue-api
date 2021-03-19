@@ -234,8 +234,7 @@ const router = (fastify, { }, next) => {
 		const sex = req.body.sex;
 		const servicePointId = req.body.servicePointId;
 
-		const nanoid = customAlphabet('123456789', 4);
-		const queueUniqueNumber = nanoid();
+		const queueUniqueNumber = await hisModel.generateQueueNumber(db);
 
 		if (hn && vn && dateServ && firstName && lastName) {
 			try {
@@ -267,7 +266,7 @@ const router = (fastify, { }, next) => {
 				fastify.mqttClient.publish(topic, 'update visit', { qos: 0, retain: false });
 				fastify.mqttClient.publish(topicServicePoint, '{"message":"update_visit"}', { qos: 0, retain: false });
 
-				reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, hn: hn, vn: vn, queueNumber: queueNumber, queueId: queueId[0] });
+				reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, hn: hn, vn: vn, queueNumber: queueUniqueNumber, queueId: queueId[0] });
 
 			} catch (error) {
 				fastify.log.error(error);

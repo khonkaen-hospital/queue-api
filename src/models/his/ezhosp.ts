@@ -1,4 +1,6 @@
 import * as knex from 'knex';
+import { customAlphabet } from 'nanoid';
+import * as moment from 'moment';
 export class EzhospModel {
 
 	getPatientInfo(db: knex, cid: any) {
@@ -23,6 +25,32 @@ export class EzhospModel {
 
 	getCurrentVisit(db: knex, hn) {
 		return [];
+	}
+
+	getRobotQueueToday(db: knex) {
+		const date = moment().format('YYYY-MM-DD');
+		return db('q4u_queue')
+			.select('queue_number')
+			.where({
+				date_serv: date,
+				service_point_id: 12
+			});
+	}
+
+	async generateQueueNumber(db: knex) {
+		let queueToday = await this.getRobotQueueToday(db);
+		let queuenumber: Array<any> = queueToday.map(v => v.queue_number);
+		return this.rendom(db, queuenumber);
+	}
+
+	rendom(db, queuenumber: Array<any>) {
+		const nanoid = customAlphabet('123456789', 4);
+		let queueUniqueNumber = nanoid();
+		if (queuenumber.some(n => n === queueUniqueNumber)) {
+			return this.rendom(db, queuenumber);
+		} else {
+			return queueUniqueNumber;
+		}
 	}
 
 	getVisitListRobot(db: knex, dateServ: any, query: any, localCode: any[], vn: any[], servicePointCode: any, limit: number = 20, offset: number = 0) {
