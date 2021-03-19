@@ -235,47 +235,60 @@ const router = (fastify, { }, next) => {
 		const servicePointId = req.body.servicePointId;
 
 		const queueUniqueNumber = await hisModel.generateQueueNumber(db);
+		const queueIsExist = await hisModel.getRobotQueueTodayIsExist(db, hn, vn);
 
-		if (hn && vn && dateServ && firstName && lastName) {
-			try {
-
-				await queueModel.savePatient(db, hn, title, firstName, lastName, birthDate, sex);
-				let queueNumber = 0;
-				let queueInterview = 0;
-
-				const dateCreate = moment().format('YYYY-MM-DD HH:mm:ss');
-
-				const qData: any = {};
-				qData.servicePointId = servicePointId;
-				qData.dateServ = dateServ;
-				qData.timeServ = timeServ;
-				qData.queueNumber = queueUniqueNumber;
-				qData.hn = hn;
-				qData.vn = vn;
-				qData.priorityId = priorityId;
-				qData.dateCreate = dateCreate;
-				qData.hisQueue = hisQueue;
-				qData.queueRunning = queueUniqueNumber;
-				qData.queueInterview = queueInterview;
-
-				const queueId: any = await queueModel.createQueueInfo(db, qData);
-
-				const topic = process.env.QUEUE_CENTER_TOPIC;
-				const topicServicePoint = `${process.env.SERVICE_POINT_TOPIC}/${servicePointId}`;
-
-				fastify.mqttClient.publish(topic, 'update visit', { qos: 0, retain: false });
-				fastify.mqttClient.publish(topicServicePoint, '{"message":"update_visit"}', { qos: 0, retain: false });
-
-				reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, hn: hn, vn: vn, queueNumber: queueUniqueNumber, queueId: queueId[0] });
-
-			} catch (error) {
-				fastify.log.error(error);
-				reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
-			}
-
+		if (queueIsExist) {
+			reply.status(HttpStatus.OK).send({
+				statusCode: HttpStatus.OK,
+				hn: hn,
+				vn: vn,
+				queueNumber: queueIsExist.queue_number,
+				queueId: queueIsExist.queue_id,
+				message: 'รายการนี้ออกหมายเลขรับยาไปแล้ว'
+			});
 		} else {
-			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'ข้อมูลไม่ครบครับ' });
+			if (hn && vn && dateServ && firstName && lastName) {
+				try {
+
+					await queueModel.savePatient(db, hn, title, firstName, lastName, birthDate, sex);
+					let queueInterview = 0;
+
+					const dateCreate = moment().format('YYYY-MM-DD HH:mm:ss');
+
+					const qData: any = {};
+					qData.servicePointId = servicePointId;
+					qData.dateServ = dateServ;
+					qData.timeServ = timeServ;
+					qData.queueNumber = queueUniqueNumber;
+					qData.hn = hn;
+					qData.vn = vn;
+					qData.priorityId = priorityId;
+					qData.dateCreate = dateCreate;
+					qData.hisQueue = hisQueue;
+					qData.queueRunning = queueUniqueNumber;
+					qData.queueInterview = queueInterview;
+					let queueId = [null];
+					queueId = await queueModel.createQueueInfo(db, qData);
+
+					const topic = process.env.QUEUE_CENTER_TOPIC;
+					const topicServicePoint = `${process.env.SERVICE_POINT_TOPIC}/${servicePointId}`;
+
+					fastify.mqttClient.publish(topic, 'update visit', { qos: 0, retain: false });
+					fastify.mqttClient.publish(topicServicePoint, '{"message":"update_visit"}', { qos: 0, retain: false });
+
+					reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, hn: hn, vn: vn, queueNumber: queueUniqueNumber, queueId: queueId[0] });
+
+				} catch (error) {
+					fastify.log.error(error);
+					reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
+				}
+
+			} else {
+				reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'ข้อมูลไม่ครบครับ' });
+			}
 		}
+
+
 	});
 
 	fastify.post('/register', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {

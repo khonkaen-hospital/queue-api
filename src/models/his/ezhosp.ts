@@ -37,6 +37,19 @@ export class EzhospModel {
 			});
 	}
 
+	getRobotQueueTodayIsExist(db: knex, hn: string, vn: string) {
+		const date = moment().format('YYYY-MM-DD');
+		console.log(date, hn, vn);
+		return db('q4u_queue')
+			.select('queue_number', 'queue_id')
+			.where({
+				hn: hn,
+				vn: vn,
+				date_serv: date,
+				service_point_id: 12
+			}).first();
+	}
+
 	async generateQueueNumber(db: knex) {
 		let queueToday = await this.getRobotQueueToday(db);
 		let queuenumber: Array<any> = queueToday.map(v => v.queue_number);
