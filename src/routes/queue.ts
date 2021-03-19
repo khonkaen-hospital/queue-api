@@ -206,13 +206,12 @@ const router = (fastify, { }, next) => {
 		}
 	});
 
-
 	fastify.get('/his-pharmacy-robot', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 		const hn = req.query.hn || '';
 		const query: any = req.query.query || '';
 		try {
 			const dateServ: any = moment().format('YYYY-MM-DD');
-			const rs: any = await hisModel.getPharmacyRobotQueue(dbHIS, hn, dateServ);
+			const rs: any = await hisModel.getPharmacyRobotQueue(dbHIS, dateServ);
 			reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, results: rs });
 		} catch (error) {
 			fastify.log.error(error);

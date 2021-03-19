@@ -13,7 +13,7 @@ export class EzhospModel {
 			.where('hn', hn).limit(1);
 	}
 
-	getPharmacyRobotQueue(db: knex, hn: any, dateServ: string) {
+	getPharmacyRobotQueue(db: knex, dateServ: string) {
 		return db('pharmacy_opd_drug_robot')
 			.select('pharmacy_opd_drug_robot.*', 'patient.title', 'patient.name', 'patient.surname')
 			.innerJoin('patient', 'patient.hn', 'pharmacy_opd_drug_robot.hn')
@@ -31,8 +31,8 @@ export class EzhospModel {
 				'o.dep as clinic_code', 'o.dep_name as clinic_name',
 				'o.title', 'o.name as first_name', 'o.surname as last_name',
 				'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
-			.where('o.date', dateServ)
-			.whereNotIn('o.vn', vn);
+			.where('o.date', dateServ);
+		// .whereNotIn('o.vn', vn);
 
 		if (query) {
 			var _arrQuery = query.split(' ');
