@@ -218,6 +218,14 @@ const router = (fastify, { }, next) => {
 			reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
 		}
 	});
+	// check queue_number duplicate
+	fastify.post('/register/number', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
+		const queueUniqueNumber = await hisModel.generateQueueNumber(db);
+		reply.status(HttpStatus.OK).send({
+			statusCode: HttpStatus.OK,
+			queueUniqueNumber: queueUniqueNumber
+		});
+	});
 
 	fastify.post('/register/pharmacy-robot', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 		const hn = req.body.hn;
@@ -234,7 +242,6 @@ const router = (fastify, { }, next) => {
 		const sex = req.body.sex;
 		const servicePointId = req.body.servicePointId;
 
-		const queueUniqueNumber = await hisModel.generateQueueNumber(db);
 		const queueIsExist = await hisModel.getRobotQueueTodayIsExist(db, hn, vn);
 
 		if (queueIsExist) {
@@ -244,10 +251,12 @@ const router = (fastify, { }, next) => {
 				vn: vn,
 				queueNumber: queueIsExist.queue_number,
 				queueId: queueIsExist.queue_id,
+				isDuplicate: 1,
 				message: 'รายการนี้ออกหมายเลขรับยาไปแล้ว'
 			});
 		} else {
 			if (hn && vn && dateServ && firstName && lastName) {
+				const queueUniqueNumber = await hisModel.generateQueueNumber(db);
 				try {
 
 					await queueModel.savePatient(db, hn, title, firstName, lastName, birthDate, sex);
@@ -260,12 +269,12 @@ const router = (fastify, { }, next) => {
 					qData.dateServ = dateServ;
 					qData.timeServ = timeServ;
 					qData.queueNumber = queueUniqueNumber;
+					qData.queueRunning = queueUniqueNumber;
 					qData.hn = hn;
 					qData.vn = vn;
 					qData.priorityId = priorityId;
 					qData.dateCreate = dateCreate;
 					qData.hisQueue = hisQueue;
-					qData.queueRunning = queueUniqueNumber;
 					qData.queueInterview = queueInterview;
 					let queueId = [null];
 					queueId = await queueModel.createQueueInfo(db, qData);
@@ -276,15 +285,31 @@ const router = (fastify, { }, next) => {
 					fastify.mqttClient.publish(topic, 'update visit', { qos: 0, retain: false });
 					fastify.mqttClient.publish(topicServicePoint, '{"message":"update_visit"}', { qos: 0, retain: false });
 
-					reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.OK, hn: hn, vn: vn, queueNumber: queueUniqueNumber, queueId: queueId[0] });
+					reply.status(HttpStatus.OK).send({
+						statusCode: HttpStatus.OK,
+						hn: hn,
+						vn: vn,
+						queueNumber: queueUniqueNumber,
+						queueId: queueId[0],
+						isDuplicate: 0,
+						message: ''
+					});
 
 				} catch (error) {
 					fastify.log.error(error);
-					reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
+					reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+						isDuplicate: 0,
+						statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+						message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR)
+					});
 				}
 
 			} else {
-				reply.status(HttpStatus.OK).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'ข้อมูลไม่ครบครับ' });
+				reply.status(HttpStatus.OK).send({
+					statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+					message: 'ข้อมูลไม่ครบ',
+					isDuplicate: 0
+				});
 			}
 		}
 

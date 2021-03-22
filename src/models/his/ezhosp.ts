@@ -27,16 +27,6 @@ export class EzhospModel {
 		return [];
 	}
 
-	getRobotQueueToday(db: knex) {
-		const date = moment().format('YYYY-MM-DD');
-		return db('q4u_queue')
-			.select('queue_number')
-			.where({
-				date_serv: date,
-				service_point_id: 12
-			});
-	}
-
 	getRobotQueueTodayIsExist(db: knex, hn: string, vn: string) {
 		const date = moment().format('YYYY-MM-DD');
 		console.log(date, hn, vn);
@@ -50,20 +40,31 @@ export class EzhospModel {
 			}).first();
 	}
 
-	async generateQueueNumber(db: knex) {
-		let queueToday = await this.getRobotQueueToday(db);
-		let queuenumber: Array<any> = queueToday.map(v => v.queue_number);
-		return this.rendom(db, queuenumber);
+	getRobotQueueToday(db: knex, queue_number: string) {
+		const date = moment().format('YYYY-MM-DD');
+		return db('q4u_queue')
+			.select('queue_number')
+			.where({
+				queue_number: queue_number,
+				date_serv: date,
+				service_point_id: 12
+			}).first();
 	}
 
-	rendom(db, queuenumber: Array<any>) {
+	async generateQueueNumber(db: knex) {
 		const nanoid = customAlphabet('123456789', 4);
-		let queueUniqueNumber = nanoid();
-		if (queuenumber.some(n => n === queueUniqueNumber)) {
-			return this.rendom(db, queuenumber);
+		const queueUniqueNumber = nanoid();
+		const queueIsExists = await this.getRobotQueueToday(db, queueUniqueNumber);
+		if (queueIsExists) {
+			return this.generateQueueNumber(db);
 		} else {
 			return queueUniqueNumber;
 		}
+	}
+
+	rendom() {
+		const nanoid = customAlphabet('123456789', 4);
+		return nanoid();
 	}
 
 	getVisitListRobot(db: knex, dateServ: any, query: any, localCode: any[], vn: any[], servicePointCode: any, limit: number = 20, offset: number = 0) {
