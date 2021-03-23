@@ -43,20 +43,21 @@ export class EzhospModel {
 	getRobotQueueToday(db: knex, queue_number: string) {
 		const date = moment().format('YYYY-MM-DD');
 		return db('q4u_queue')
-			.select('queue_number')
+			.select(db.raw('count(queue_number) as total'))
+			.whereRaw('date_serv = curdate()')
 			.where({
 				queue_number: queue_number,
-				date_serv: date,
 				service_point_id: 12
 			}).first();
 	}
 
-	async generateQueueNumber(db: knex) {
+	async generateQueueNumber(db: knex, i: number = 1) {
 		const nanoid = customAlphabet('123456789', 4);
 		const queueUniqueNumber = nanoid();
 		const queueIsExists = await this.getRobotQueueToday(db, queueUniqueNumber);
-		if (queueIsExists) {
-			return this.generateQueueNumber(db);
+		if (queueIsExists.total > 0) {
+			//console.log('duplicate', queueUniqueNumber, i);
+			return this.generateQueueNumber(db, i++);
 		} else {
 			return queueUniqueNumber;
 		}
