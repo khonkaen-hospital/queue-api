@@ -3,6 +3,28 @@ import { customAlphabet } from 'nanoid';
 import * as moment from 'moment';
 export class EzhospModel {
 
+	getTodayReport(db: knex) {
+		const sql = `
+		select
+		count(vn) as total,
+		((60*60*8) / count(vn)) as avg,
+		count(if(is_auto_queuenumber=0,1,0)) as manual,
+		sum(if(is_auto_queuenumber=1,1,0)) as auto
+		from (
+			select
+			d.hn,
+			d.vn,
+			d.is_auto_queuenumber
+			from hospdata.pharmacy_opd_drug_robot d
+			inner join hospdata.pharmacy_opd_drug_pay p on p.code_pay = d.codepay
+			where date(d.request_datetime) = current_date()
+			and p.location = 'OPD11'
+			group by hn, vn
+		) as report
+		`;
+		return db.raw(sql);
+	}
+
 	getPatientInfo(db: knex, cid: any) {
 		return db('patient')
 			.select('hn', 'name as first_name', 'title', 'sex', 'surname as last_name', 'birth as birthdate')

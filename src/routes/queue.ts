@@ -226,6 +226,13 @@ const router = (fastify, { }, next) => {
 			queueUniqueNumber: queueUniqueNumber
 		});
 	});
+	fastify.get('/today-report', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
+		const result = await hisModel.getTodayReport(db);
+		reply.status(HttpStatus.OK).send({
+			success: HttpStatus.OK,
+			result: result[0][0]
+		});
+	});
 
 	fastify.post('/register/pharmacy-robot', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 		const hn = req.body.hn;
