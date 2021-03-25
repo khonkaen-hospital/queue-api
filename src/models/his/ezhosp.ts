@@ -8,7 +8,7 @@ export class EzhospModel {
 		select
 		count(vn) as total,
 		((60*60*8) / count(vn)) as avg,
-		count(if(is_auto_queuenumber=0,1,0)) as manual,
+		sum(if(is_auto_queuenumber=0,1,0)) as manual,
 		sum(if(is_auto_queuenumber=1,1,0)) as auto
 		from (
 			select
