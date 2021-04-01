@@ -174,6 +174,16 @@ const router = (fastify, { }, next) => {
 		}
 	});
 
+	fastify.get('/visit-by-hn/:hn', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
+		const hn = req.params.hn;
+		const rs: any = await hisModel.getVisitListRobotByHn(dbHIS, hn);
+		reply.status(HttpStatus.OK).send({
+			statusCode: HttpStatus.OK,
+			results: rs,
+			total: rs.length
+		});
+	});
+
 	fastify.get('/his-visit-robot', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 
 		const limit = +req.query.limit;

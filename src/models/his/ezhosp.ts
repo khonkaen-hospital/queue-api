@@ -129,6 +129,16 @@ export class EzhospModel {
 
 	}
 
+	getVisitListRobotByHn(db: knex, hn: string) {
+		return db('view_opd_visit as o')
+			.select('o.vn', 'o.hn', db.raw('o.date as date_serv'), db.raw('o.time as time_serv'),
+				'o.dep as clinic_code', 'o.dep_name as clinic_name',
+				'o.title', 'o.name as first_name', 'o.surname as last_name',
+				'o.birth as birthdate', 'o.sex', 'o.queue as his_queue')
+			.whereRaw('o.date = current_date()')
+			.where({ hn: hn });
+	}
+
 	getVisitTotalRobot(db: knex, dateServ: any, query: any, localCode: any[], vn: any[], servicePointCode: any) {
 		var sql = db('view_opd_visit as o')
 			.select(db.raw('count(1) as total'))
