@@ -1,6 +1,7 @@
 import * as knex from 'knex';
 import { customAlphabet } from 'nanoid';
 import * as moment from 'moment';
+var request = require("request");
 export class EzhospModel {
 
 	getTodayReport(db: knex) {
@@ -45,11 +46,56 @@ export class EzhospModel {
 			.orderBy('request_datetime', 'DESC');
 	}
 
+	getPharmacyRobotQueueByVn(db: knex, vn: string, dateServ: string) {
+		return db('pharmacy_opd_drug_robot')
+			.select('pharmacy_opd_drug_robot.*', 'patient.title', 'patient.name', 'patient.surname')
+			.innerJoin('patient', 'patient.hn', 'pharmacy_opd_drug_robot.hn')
+			.whereRaw('date(request_datetime) = ?', [dateServ])
+			.where({ vn: vn })
+			.orderBy('request_datetime', 'DESC');
+	}
+
 	getCurrentVisit(db: knex, hn) {
 		return [];
 	}
 
-	getRobotQueueTodayIsExist(db: knex, hn: string, vn: string) {
+	checkRobotQueueStatus(data) {
+		return new Promise((resolve: any, reject: any) => {
+			var options = {
+				method: 'POST',
+				url: 'http://192.168.15.245:3030/api/report_status',
+				agentOptions: {
+					rejectUnauthorized: false
+				},
+				headers:
+				{
+					'content-type': 'text/xml'
+				},
+				body: data
+			};
+
+			request(options, function (error, response, body) {
+				if (error) {
+					reject(error);
+				} else {
+					resolve(body);
+				}
+			});
+		});
+	}
+
+	getQueueTodayIsExist(db: knex, queue_number: string, service_point_id: number = 12) {
+		const date = moment().format('YYYY-MM-DD');
+		return db('q4u_queue')
+			.select('queue_number', 'queue_id', 'hn', 'vn', 'date_create')
+			.where({
+				queue_number: queue_number,
+				date_serv: date,
+				service_point_id: service_point_id
+			}).first();
+	}
+
+	getRobotQueueTodayIsExist(db: knex, hn: string, vn: string, service_point_id: number = 12) {
 		const date = moment().format('YYYY-MM-DD');
 		console.log(date, hn, vn);
 		return db('q4u_queue')
@@ -58,7 +104,7 @@ export class EzhospModel {
 				hn: hn,
 				vn: vn,
 				date_serv: date,
-				service_point_id: 12
+				service_point_id: service_point_id
 			}).first();
 	}
 

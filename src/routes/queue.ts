@@ -228,6 +228,7 @@ const router = (fastify, { }, next) => {
 			reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
 		}
 	});
+
 	// check queue_number duplicate
 	fastify.post('/register/number', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 		const queueUniqueNumber = await hisModel.generateQueueNumber(db);
@@ -236,12 +237,49 @@ const router = (fastify, { }, next) => {
 			queueUniqueNumber: queueUniqueNumber
 		});
 	});
+
 	fastify.get('/today-report', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 		const result = await hisModel.getTodayReport(db);
 		reply.status(HttpStatus.OK).send({
 			success: HttpStatus.OK,
 			result: result[0][0]
 		});
+	});
+
+	fastify.get('/queue-status', async (req: fastify.Request, reply: fastify.Reply) => {
+		const queueNumber = req.query.queueNumber;
+		const servicePointId = req.query.service_point_id || 12;
+		if (!queueNumber) {
+			return reply.status(HttpStatus.OK).send({
+				statusCode: HttpStatus.OK,
+				success: false,
+				message: 'ข้อมูลไม่ถูกต้อง!'
+			});
+		};
+
+		const queueIsExist = await hisModel.getQueueTodayIsExist(db, queueNumber, servicePointId);
+		if (queueIsExist) {
+			const date = moment().format('YYYY-MM-DD');
+			const queueRobot = await hisModel.getPharmacyRobotQueueByVn(dbHIS, queueIsExist.vn, date);
+			const queueStatus = await hisModel.checkRobotQueueStatus(JSON.stringify({ que: queueIsExist.queue_number }));
+
+			reply.status(HttpStatus.OK).send({
+				statusCode: HttpStatus.OK,
+				success: true,
+				isRegisterRobot: queueRobot.length > 0 ? true : false,
+				hn: queueIsExist.hn,
+				vn: queueIsExist.vn,
+				queueNumber: queueIsExist.queue_number,
+				createdDateTime: queueIsExist.date_create,
+				queueStatus: queueStatus
+			});
+		} else {
+			reply.status(HttpStatus.OK).send({
+				statusCode: HttpStatus.OK,
+				success: false,
+				message: 'ไม่พบการลงทะเบียนรับยา!'
+			});
+		}
 	});
 
 	fastify.post('/register/pharmacy-robot', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
@@ -259,7 +297,7 @@ const router = (fastify, { }, next) => {
 		const sex = req.body.sex;
 		const servicePointId = req.body.servicePointId;
 
-		const queueIsExist = await hisModel.getRobotQueueTodayIsExist(db, hn, vn);
+		const queueIsExist = await hisModel.getRobotQueueTodayIsExist(db, hn, vn, 12);
 
 		if (queueIsExist) {
 			reply.status(HttpStatus.OK).send({
@@ -1647,6 +1685,7 @@ const router = (fastify, { }, next) => {
 			reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: HttpStatus.getStatusText(HttpStatus.INTERNAL_SERVER_ERROR) });
 		}
 	});
+
 	fastify.get('/sound/service-room-department', { preHandler: [fastify.authenticate] }, async (req: fastify.Request, reply: fastify.Reply) => {
 		const departmentId = req.query.departmentId;
 		try {
