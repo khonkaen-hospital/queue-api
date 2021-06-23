@@ -262,7 +262,7 @@ const router = (fastify, { }, next) => {
 			let status = '';
 			const date = moment().format('YYYY-MM-DD');
 			const queueRobot = await hisModel.getPharmacyRobotQueueByVn(dbHIS, queueIsExist.vn, date);
-			const queueStatus = await hisModel.checkRobotQueueStatus({ que: queueIsExist.queue_number });
+			const queueStatus = await hisModel.checkRobotQueueStatus(JSON.stringify({ que: queueIsExist.queue_number }));
 			if (queueStatus) {
 				status = JSON.parse(queueStatus);
 			}

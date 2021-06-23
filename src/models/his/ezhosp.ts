@@ -67,6 +67,7 @@ export class EzhospModel {
 				agentOptions: {
 					rejectUnauthorized: false
 				},
+				headers: { 'content-type': 'application/json' },
 				body: data
 			};
 
