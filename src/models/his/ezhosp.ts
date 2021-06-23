@@ -67,10 +67,6 @@ export class EzhospModel {
 				agentOptions: {
 					rejectUnauthorized: false
 				},
-				headers:
-				{
-					'content-type': 'text/xml'
-				},
 				body: data
 			};
 
