@@ -63,7 +63,7 @@ export class EzhospModel {
 		return new Promise((resolve: any, reject: any) => {
 			var options = {
 				method: 'POST',
-				url: 'http://192.168.15.245:3030/api/report_status',
+				url: 'http://192.168.15.245:3030/api/showstate',
 				agentOptions: {
 					rejectUnauthorized: false
 				},
