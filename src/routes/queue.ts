@@ -259,10 +259,13 @@ const router = (fastify, { }, next) => {
 
 		const queueIsExist = await hisModel.getQueueTodayIsExist(db, queueNumber, servicePointId);
 		if (queueIsExist) {
+			let status = '';
 			const date = moment().format('YYYY-MM-DD');
 			const queueRobot = await hisModel.getPharmacyRobotQueueByVn(dbHIS, queueIsExist.vn, date);
 			const queueStatus = await hisModel.checkRobotQueueStatus(JSON.stringify({ que: queueIsExist.queue_number }));
-
+			if (queueStatus) {
+				status = JSON.parse(queueStatus);
+			}
 			reply.status(HttpStatus.OK).send({
 				statusCode: HttpStatus.OK,
 				success: true,
@@ -271,7 +274,7 @@ const router = (fastify, { }, next) => {
 				vn: queueIsExist.vn,
 				queueNumber: queueIsExist.queue_number,
 				createdDateTime: queueIsExist.date_create,
-				queueStatus: queueStatus
+				queueStatus: status
 			});
 		} else {
 			reply.status(HttpStatus.OK).send({
