@@ -84,8 +84,8 @@ export class EzhospModel {
 	checkRobotQueueAvgWait() {
 		return new Promise((resolve: any, reject: any) => {
 			var options = {
-				method: 'GET',
-				url: 'http://192.168.15.245:3030/api/avgwait',
+				method: 'GET', // avgwait
+				url: 'http://192.168.15.245:3030/api/allavg',
 				agentOptions: {
 					rejectUnauthorized: false
 				},
