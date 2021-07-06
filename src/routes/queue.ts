@@ -246,6 +246,22 @@ const router = (fastify, { }, next) => {
 		});
 	});
 
+	fastify.get('/queue-avgwait', async (req: fastify.Request, reply: fastify.Reply) => {
+		const avgwait = await hisModel.checkRobotQueueAvgWait();
+		if (avgwait) {
+			reply.status(HttpStatus.OK).send({
+				statusCode: HttpStatus.OK,
+				success: true,
+				data: avgwait
+			});
+		} else {
+			reply.status(HttpStatus.OK).send({
+				statusCode: HttpStatus.OK,
+				success: false
+			});
+		}
+	});
+
 	fastify.get('/queue-status', async (req: fastify.Request, reply: fastify.Reply) => {
 		const queueNumber = req.query.queueNumber;
 		const servicePointId = req.query.service_point_id || 12;

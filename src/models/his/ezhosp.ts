@@ -81,6 +81,27 @@ export class EzhospModel {
 		});
 	}
 
+	checkRobotQueueAvgWait() {
+		return new Promise((resolve: any, reject: any) => {
+			var options = {
+				method: 'GET',
+				url: 'http://192.168.15.245:3030/api/avgwait',
+				agentOptions: {
+					rejectUnauthorized: false
+				},
+				headers: { 'content-type': 'application/json' }
+			};
+
+			request(options, function (error, response, body) {
+				if (error) {
+					reject(error);
+				} else {
+					resolve(body);
+				}
+			});
+		});
+	}
+
 	getQueueTodayIsExist(db: knex, queue_number: string, service_point_id: number = 12) {
 		const date = moment().format('YYYY-MM-DD');
 		return db('q4u_queue')
